@@ -217,22 +217,65 @@ size_t calc_nflo(Matrix const & mat1, Matrix const & mat2)
 Matrix multiply_naive(Matrix const & mat1, Matrix const & mat2){
     validate_multiplication(mat1,mat2);
     Matrix ret(mat1.nrow(), mat2.ncol());
-
     const size_t nrow1 = mat1.nrow();
     const size_t ncol1 = mat1.ncol();
     const size_t nrow2 = mat2.nrow();
     const size_t ncol2 = mat2.ncol();
-    for (){
+    StopWatch sw;
 
+    for (size_t i=0; i<nrow1; ++i)
+    {
+        const size_t base1 = i * ncol1;
+        for (size_t k=0; k<ncol2; ++k)
+        {
+            double v = 0;
+            for (size_t j=0; j<ncol1; ++j)
+            {
+                v += mat1.m_buffer[base1 + j] * mat2.m_buffer[j*ncol2 + k];
+            }
+            ret.m_buffer[base1 + k] = v;
+        }
     }
+
+    ret.elapsed() = sw.lap();
+    ret.nflo() = calc_nflo(mat1, mat2);
+
+    return ret;
 
 }
 
 Matrix multiple_tile(Matrix const & mat1, Matrix const & mat2){
 
+
 }
 Matrix multiply_mkl(Matrix const & mat1, Matrix const & mat2){
+mkl_set_num_threads(1);
 
+    Matrix ret(mat1.nrow(), mat2.ncol());
+
+    StopWatch sw;
+
+    cblas_dgemm(
+        CblasRowMajor /* const CBLAS_LAYOUT Layout */
+      , CblasNoTrans /* const CBLAS_TRANSPOSE transa */
+      , CblasNoTrans /* const CBLAS_TRANSPOSE transb */
+      , mat1.nrow() /* const MKL_INT m */
+      , mat2.ncol() /* const MKL_INT n */
+      , mat1.ncol() /* const MKL_INT k */
+      , 1.0 /* const double alpha */
+      , mat1.m_buffer /* const double *a */
+      , mat1.ncol() /* const MKL_INT lda */
+      , mat2.m_buffer /* const double *b */
+      , mat2.ncol() /* const MKL_INT ldb */
+      , 0.0 /* const double beta */
+      , ret.m_buffer /* double * c */
+      , ret.ncol() /* const MKL_INT ldc */
+    );
+
+    ret.elapsed() = sw.lap();
+    ret.nflo() = calc_nflo(mat1, mat2);
+
+    return ret;
 }
 int main(){
     Matrix mat1(1 * 1024, 1 * 1024);
