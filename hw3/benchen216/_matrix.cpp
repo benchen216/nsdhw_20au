@@ -1,7 +1,11 @@
 //
 // Created by ben on 2020/10/20.
 //
+
+#include <pybind11/pybind11.h>
 #include <mkl.h>
+
+#include "StopWatch.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -214,6 +218,7 @@ size_t calc_nflo(Matrix const & mat1, Matrix const & mat2)
     return mat1.nrow() * mat1.ncol() * mat2.ncol();
 }
 
+
 Matrix multiply_naive(Matrix const & mat1, Matrix const & mat2){
     validate_multiplication(mat1,mat2);
     Matrix ret(mat1.nrow(), mat2.ncol());
@@ -244,13 +249,46 @@ Matrix multiply_naive(Matrix const & mat1, Matrix const & mat2){
 
 }
 
-Matrix multiple_tile(Matrix const & mat1, Matrix const & mat2){
 
+Matrix multiple_tile(Matrix const & mat1, Matrix const & mat2,size_t lsize){
+    validate_multiplication(mat1,mat2);
+    Matrix ret(mat1.nrow(), mat2.ncol());
+    const size_t nrow1 = mat1.nrow();
+    const size_t ncol1 = mat1.ncol();
+    const size_t nrow2 = mat2.nrow();
+    const size_t ncol2 = mat2.ncol();
+    //const size_t m1rt = mat2.ncol();
+    //const size_t m2ct = mat2.ncol();
+    //const size_t m1ct = mat2.ncol();
+    const size_t m1rt = ceil(nrow1 / lsize);
+    const size_t m1ct = ceil(ncol1 / lsize);
+    const size_t m2ct = ceil(ncol2 / lsize);
+    double v1,v2;
+    StopWatch sw;
+    for (int z=0;z<lsize;++z){
+        for (int x=0;x<lsize;++x){
+            for (int i=0;i<m1rt;++i){
+                for (int k=0;k<m2ct;++k){
+                    for(int p=0;p<lsize;++p){
+                        for(int j=0;j<m1ct;++j){
+                            v1 = i + m1rt * x < nrow1 && j + m1ct * p < ncol1 ?mat1(i + m1rt * x,j + m1ct * p): 0;
+                            v2 = j + m1ct * p < nrow2 && k + z * m2ct < ncol2 ?mat2(j + m1ct * p,k + z * m2ct): 0;
+                            if (i + m1rt * x<nrow1 && k + z * m2ct<ncol2){
+                                ret(i + m1rt * x,k + z * m2ct) =ret(i + m1rt * x,k + z * m2ct) + v1 * v2;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    ret.elapsed() = sw.lap();
+    ret.nflo() = calc_nflo(mat1, mat2);
 
+    return ret;
 }
 Matrix multiply_mkl(Matrix const & mat1, Matrix const & mat2){
-mkl_set_num_threads(1);
-
+    mkl_set_num_threads(1);
     Matrix ret(mat1.nrow(), mat2.ncol());
 
     StopWatch sw;
@@ -279,7 +317,17 @@ mkl_set_num_threads(1);
 }
 int main(){
     Matrix mat1(1 * 1024, 1 * 1024);
-    initialize(mat1);
+    //initialize(mat1);
     Matrix mat2 = mat1;
+
     return 0;
+}
+PYBIND11_MODULE(_matrix, mod)
+{
+
+mod.doc() = "example C extension module";
+mod.def("multiply_mkl", &multiply_mkl, "multiply_mkl");
+mod.def("multiple_tile", &multiple_tile, "multiple_tile");
+mod.def("multiply_naive", &multiply_naive, "multiply_naive");
+
 }

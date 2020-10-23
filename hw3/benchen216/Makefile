@@ -1,0 +1,1 @@
+g++ -O3 -Wall -shared -std=c++17 -O3 -g -m64 -I/opt/intel/mkl/include /opt/intel/mkl/lib/libmkl_intel_lp64.a /opt/intel/mkl/lib/libmkl_sequential.a /opt/intel/mkl/lib/libmkl_core.a -lpthread -lm -ldl -fPIC `python3 -m pybind11 --includes` _matrix.cpp -o _matrix`python3-config --extension-suffix`
