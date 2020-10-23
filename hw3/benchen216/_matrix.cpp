@@ -3,6 +3,8 @@
 //
 
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+namespace py = pybind11;
 #include <mkl.h>
 
 #include "StopWatch.hpp"
@@ -13,6 +15,7 @@
 #include <vector>
 #include <stdexcept>
 #include <functional>
+
 struct Matrix {
 
 public:
@@ -322,5 +325,8 @@ mod.doc() = "example C extension module";
 mod.def("multiply_mkl", &multiply_mkl, "multiply_mkl");
 mod.def("multiple_tile", &multiple_tile, "multiple_tile");
 mod.def("multiply_naive", &multiply_naive, "multiply_naive");
-
+py::class_<Matrix>(mod, "Matrix")
+.def(py::init<size_t, size_t>())
+.def_property_readonly("nrow", &Matrix::nrow)
+.def_property_readonly("ncol", &Matrix::ncol);
 }
