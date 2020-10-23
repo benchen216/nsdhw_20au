@@ -315,13 +315,6 @@ Matrix multiply_mkl(Matrix const & mat1, Matrix const & mat2){
 
     return ret;
 }
-int main(){
-    Matrix mat1(1 * 1024, 1 * 1024);
-    //initialize(mat1);
-    Matrix mat2 = mat1;
-
-    return 0;
-}
 PYBIND11_MODULE(_matrix, mod)
 {
 

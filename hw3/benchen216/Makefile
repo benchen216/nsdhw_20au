@@ -1,1 +1,41 @@
-g++ -O3 -Wall -shared -std=c++17 -O3 -g -m64 -I/opt/intel/mkl/include /opt/intel/mkl/lib/libmkl_intel_lp64.a /opt/intel/mkl/lib/libmkl_sequential.a /opt/intel/mkl/lib/libmkl_core.a -lpthread -lm -ldl -fPIC `python3 -m pybind11 --includes` _matrix.cpp -o _matrix`python3-config --extension-suffix`
+FLAGS ?=
+
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Darwin)
+MKLROOT ?= /opt/intel/mkl
+MKLEXT ?= a
+CXXFLAGS :=
+endif
+
+ifeq ($(UNAME_S),Linux)
+#MKLROOT ?= ${HOME}/opt/conda
+MKLROOT ?= /home/ben/anaconda3/envs/nsd
+MKLEXT ?= so
+CXXFLAGS := -Wl,--no-as-needed
+endif
+
+MKLLINKLINE := \
+	${MKLROOT}/lib/libmkl_intel_lp64.${MKLEXT} \
+	${MKLROOT}/lib/libmkl_sequential.${MKLEXT} \
+	${MKLROOT}/lib/libmkl_core.${MKLEXT} \
+	-lpthread -lm -ldl -fPIC `python3 -m pybind11 --includes`
+
+CXX = g++
+CXXFLAGS := ${CXXFLAGS} \
+	-std=c++11 -O3 -g -m64 \
+	-I${MKLROOT}/include \
+	${MKLLINKLINE} \
+	${FLAGS}
+
+BINS := _matrix
+
+.PHONY: default
+default: ${BINS}
+
+%: %.cpp StopWatch.hpp Makefile
+	${CXX} ${CXXFLAGS} -o _matrix`python3-config --extension-suffix` _matrix.cpp
+
+.PHONY: clean
+clean:
+	rm -rf *.o *.dSYM/ ${BINS}
