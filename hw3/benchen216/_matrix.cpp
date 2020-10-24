@@ -85,25 +85,6 @@ public:
         m_nflo = other.m_nflo;
         return *this;
     }
-    bool operator== (const Matrix & other)
-    {
-        if (this == &other) { return true; }
-        if (m_nrow != other.nrow() || m_ncol != other.ncol()) { return false; }
-
-        const size_t len = m_nrow*m_ncol;
-        bool flag = true;
-
-        for (size_t i=0; i<len; ++i)
-        {
-            if( m_buffer[i] != other.buffer(i))
-            {
-                flag = false;
-                break;
-            }
-        }
-
-        return ( flag ? true : false );
-    }
 
     Matrix(Matrix && other)
             : m_nrow(other.m_nrow), m_ncol(other.m_ncol)
@@ -196,7 +177,25 @@ Matrix Matrix::transpose() const
 }
 
 
+bool operator==(Matrix const &mat1, Matrix const &mat2) {
+    if ((mat1.ncol() != mat2.ncol()) && (mat1.nrow() != mat2.ncol())) {
+        return false;
+    }
 
+    for (size_t i = 0; i < mat1.nrow(); ++i) {
+        for (size_t j = 0; j < mat1.ncol(); ++j) {
+            if (mat1(i, j) != mat2(i, j)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool operator!=(Matrix const &mat1, Matrix const &mat2) {
+    return !(mat1 == mat2);
+}
 
 /*
  * Throw an exception if the shapes of the two matrices don't support
@@ -323,20 +322,17 @@ m.doc() = "pybind11 matrix multiplication test";
 m.def("multiply_naive", & multiply_naive, "naive method");
 m.def("multiply_tile", & multiply_tile, "Tiling solution");
 m.def("multiply_mkl", & multiply_mkl, "use mkl");
-py::class_<Matrix>(m, "Matrix")
-.def(py::init<const size_t, const size_t>())
-.def_property_readonly("nrow", &Matrix::nrow)
-.def_property_readonly("ncol", &Matrix::ncol)
-.def("__getitem__", [](const Matrix & mat, std::tuple<size_t, size_t> t) -> double
-{
-//std::cout<<"getitem:start"<<std::endl;
-return mat(std::get<0>(t), std::get<1>(t));
-})
-.def("__setitem__", [](Matrix & mat, std::tuple<size_t, size_t> t, const double & v)
-{
-//std::cout<<"setitem:start"<<std::endl;
-mat(std::get<0>(t), std::get<1>(t)) = v;
-})
-.def("__eq__", &Matrix::operator==)
-;
+py::class_<Matrix>(m, "Matrix", py::buffer_protocol())
+.def(py::init<size_t, size_t>())
+.def(py::init<size_t, size_t, const std::vector<double> &>())
+.def(py::init<const Matrix &>())
+.def_property("nrow", &Matrix::nrow, nullptr)
+.def_property("ncol", &Matrix::ncol, nullptr)
+.def("__eq__", &operator==)
+.def("buffer_vector", &Matrix::buffer_vector)
+.def("__setitem__", [](Matrix &mat, std::pair<size_t, size_t> i,
+double val) { mat(i.first, i.second) = val; })
+.def("__getitem__", [](Matrix &mat, std::pair<size_t, size_t> i) {
+return mat(i.first, i.second);
+});
 }
