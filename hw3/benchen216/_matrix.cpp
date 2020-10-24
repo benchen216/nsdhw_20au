@@ -136,6 +136,10 @@ public:
 
     Matrix transpose() const;
 
+    friend Matrix multiply_naive(Matrix const &mat1, Matrix const &mat2);
+    friend Matrix multiply_tile(const Matrix &mat1, const Matrix &mat2, const size_t tile_size);
+    friend Matrix multiply_mkl(Matrix const &mat1, Matrix const &mat2);
+    friend bool operator==(Matrix const &mat1, Matrix const &mat2);
 public:
 
     size_t index(size_t row, size_t col) const
