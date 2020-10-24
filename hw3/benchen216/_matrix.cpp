@@ -85,6 +85,25 @@ public:
         m_nflo = other.m_nflo;
         return *this;
     }
+    bool operator== (const Matrix & other)
+    {
+        if (this == &other) { return true; }
+        if (m_nrow != other.nrow() || m_ncol != other.ncol()) { return false; }
+
+        const size_t len = m_nrow*m_ncol;
+        bool flag = true;
+
+        for (size_t i=0; i<len; ++i)
+        {
+            if( m_buffer[i] != other.buffer(i))
+            {
+                flag = false;
+                break;
+            }
+        }
+
+        return ( flag ? true : false );
+    }
 
     Matrix(Matrix && other)
             : m_nrow(other.m_nrow), m_ncol(other.m_ncol)
@@ -136,6 +155,8 @@ public:
 
     Matrix transpose() const;
 
+public:
+
     size_t index(size_t row, size_t col) const
     {
         return row * m_ncol + col;
@@ -174,31 +195,9 @@ Matrix Matrix::transpose() const
     return ret;
 }
 
-bool operator== (Matrix const & mat1, Matrix const & mat2)
-{
-    if ((mat1.ncol() != mat2.ncol()) && (mat1.nrow() != mat2.ncol()))
-    {
-        return false;
-    }
 
-    for (size_t i=0; i<mat1.nrow(); ++i)
-    {
-        for (size_t j=0; j<mat1.ncol(); ++j)
-        {
-            if (mat1(i, j) != mat2(i, j))
-            {
-                return false;
-            }
-        }
-    }
 
-    return true;
-}
 
-bool operator!= (Matrix const & mat1, Matrix const & mat2)
-{
-    return !(mat1 == mat2);
-}
 /*
  * Throw an exception if the shapes of the two matrices don't support
  * multiplication.
@@ -253,7 +252,7 @@ Matrix multiply_naive(Matrix const & mat1, Matrix const & mat2){
 }
 
 
-Matrix multiple_tile(Matrix const & mat1, Matrix const & mat2,size_t lsize){
+Matrix multiply_tile(Matrix const & mat1, Matrix const & mat2,size_t lsize){
     validate_multiplication(mat1,mat2);
     Matrix ret(mat1.nrow(), mat2.ncol());
     const size_t nrow1 = mat1.nrow();
@@ -318,15 +317,26 @@ Matrix multiply_mkl(Matrix const & mat1, Matrix const & mat2){
 
     return ret;
 }
-PYBIND11_MODULE(_matrix, mod)
+PYBIND11_MODULE(_matrix, m)
 {
-
-mod.doc() = "example C extension module";
-mod.def("multiply_mkl", &multiply_mkl, "multiply_mkl");
-mod.def("multiple_tile", &multiple_tile, "multiple_tile");
-mod.def("multiply_naive", &multiply_naive, "multiply_naive");
-py::class_<Matrix>(mod, "Matrix")
-.def(py::init<size_t, size_t>())
+m.doc() = "pybind11 matrix multiplication test";
+m.def("multiply_naive", & multiply_naive, "naive method");
+m.def("multiply_tile", & multiply_tile, "Tiling solution");
+m.def("multiply_mkl", & multiply_mkl, "use mkl");
+py::class_<Matrix>(m, "Matrix")
+.def(py::init<const size_t, const size_t>())
 .def_property_readonly("nrow", &Matrix::nrow)
-.def_property_readonly("ncol", &Matrix::ncol);
+.def_property_readonly("ncol", &Matrix::ncol)
+.def("__getitem__", [](const Matrix & mat, std::tuple<size_t, size_t> t) -> double
+{
+//std::cout<<"getitem:start"<<std::endl;
+return mat(std::get<0>(t), std::get<1>(t));
+})
+.def("__setitem__", [](Matrix & mat, std::tuple<size_t, size_t> t, const double & v)
+{
+//std::cout<<"setitem:start"<<std::endl;
+mat(std::get<0>(t), std::get<1>(t)) = v;
+})
+.def("__eq__", &Matrix::operator==)
+;
 }
