@@ -45,4 +45,5 @@ clean:
 
 .PHONY: test
 test:
+    pytest test_4.py
 
