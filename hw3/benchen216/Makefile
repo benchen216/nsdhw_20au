@@ -41,7 +41,7 @@ default: ${BINS}
 
 .PHONY: clean
 clean:
-	rm -rf *.o *.dSYM/ ${BINS}
+	rm -rf *.o *.dSYM/ ${BINS} *.so *.txt
 
 .PHONY: test
 test:
