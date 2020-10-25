@@ -242,37 +242,26 @@ Matrix multiply_naive(Matrix const & mat1, Matrix const & mat2){
 Matrix multiply_tile(Matrix const & mat1, Matrix const & mat2,size_t lsize){
     validate_multiplication(mat1,mat2);
     Matrix ret(mat1.nrow(), mat2.ncol());
-    ret.zero();
+    //ret.zero();
     const size_t nrow1 = mat1.nrow();
     const size_t ncol1 = mat1.ncol();
     const size_t nrow2 = mat2.nrow();
     const size_t ncol2 = mat2.ncol();
-    //const size_t m1rt = mat2.ncol();
-    //const size_t m2ct = mat2.ncol();
-    //const size_t m1ct = mat2.ncol();
-    const size_t m1rt = ceil(nrow1 / lsize);
-    const size_t m1ct = ceil(ncol1 / lsize);
-    const size_t m2ct = ceil(ncol2 / lsize);
-    double v1,v2;
-
-    for (size_t z=0;z<lsize;++z){
-        for (size_t x=0;x<lsize;++x){
-            for (size_t i=0;i<m1rt;++i){
-                for (size_t k=0;k<m2ct;++k){
-                    for(size_t p=0;p<lsize;++p){
-                        for(size_t j=0;j<m1ct;++j){
-                            v1 = i + m1rt * x < nrow1 && j + m1ct * p < ncol1 ?mat1(i + m1rt * x,j + m1ct * p): 0;
-                            v2 = j + m1ct * p < nrow2 && k + z * m2ct < ncol2 ?mat2(j + m1ct * p,k + z * m2ct): 0;
-                            if (i + m1rt * x<nrow1 && k + z * m2ct<ncol2){
-                                ret(i + m1rt * x,k + z * m2ct) =ret(i + m1rt * x,k + z * m2ct) + v1 * v2;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
+#pragma omp parallel for
+   for (size_t i = 0; i < nrow1; i += lsize){
+     for (size_t j = 0; j < ncol2; j += lsize){
+       for (size_t k = 0; k < nrow1; k += lsize){
+         // multiply naive
+         for (size_t nk = k; nk < (lsize+k>ncol1?ncol1:lsize+k); ++nk){
+           for (size_t ni = i; ni <(lsize+i>nrow1?nrow1:lsize+i); ++ni){
+             for (size_t nj = j; nj < (lsize+j>ncol2?ncol2:lsize+j); ++nj){
+               ret(ni, nj) += mat1(ni, nk) * mat2(nk, nj);
+             }
+           }
+         }
+       }
+     }
+   }
     return ret;
 }
 Matrix multiply_mkl(Matrix const & mat1, Matrix const & mat2){
