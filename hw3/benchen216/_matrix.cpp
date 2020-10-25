@@ -6,7 +6,7 @@
 #include <pybind11/stl.h>
 namespace py = pybind11;
 #include <mkl.h>
-
+#include <omp.h>
 #include "StopWatch.hpp"
 
 #include <iostream>
@@ -123,7 +123,13 @@ struct Matrix {
     size_t index(size_t row, size_t col) const { return row * m_ncol + col; }
 
     void save(Matrix &mat, size_t it, size_t jt);
-
+    void zero() {
+        for (size_t i = 0; i < m_nrow; ++i) {
+            for (size_t j = 0; j < m_ncol; ++j) {
+                (*this)(i, j) = 0;
+            }
+        }
+    }
     void reset_buffer(size_t nrow, size_t ncol) {
         if (m_buffer) {
             delete[] m_buffer;
@@ -236,6 +242,7 @@ Matrix multiply_naive(Matrix const & mat1, Matrix const & mat2){
 Matrix multiply_tile(Matrix const & mat1, Matrix const & mat2,size_t lsize){
     validate_multiplication(mat1,mat2);
     Matrix ret(mat1.nrow(), mat2.ncol());
+    ret.zero();
     const size_t nrow1 = mat1.nrow();
     const size_t ncol1 = mat1.ncol();
     const size_t nrow2 = mat2.nrow();
@@ -248,12 +255,12 @@ Matrix multiply_tile(Matrix const & mat1, Matrix const & mat2,size_t lsize){
     const size_t m2ct = ceil(ncol2 / lsize);
     double v1,v2;
 
-    for (int z=0;z<lsize;++z){
-        for (int x=0;x<lsize;++x){
-            for (int i=0;i<m1rt;++i){
-                for (int k=0;k<m2ct;++k){
-                    for(int p=0;p<lsize;++p){
-                        for(int j=0;j<m1ct;++j){
+    for (size_t z=0;z<lsize;++z){
+        for (size_t x=0;x<lsize;++x){
+            for (size_t i=0;i<m1rt;++i){
+                for (size_t k=0;k<m2ct;++k){
+                    for(size_t p=0;p<lsize;++p){
+                        for(size_t j=0;j<m1ct;++j){
                             v1 = i + m1rt * x < nrow1 && j + m1ct * p < ncol1 ?mat1(i + m1rt * x,j + m1ct * p): 0;
                             v2 = j + m1ct * p < nrow2 && k + z * m2ct < ncol2 ?mat2(j + m1ct * p,k + z * m2ct): 0;
                             if (i + m1rt * x<nrow1 && k + z * m2ct<ncol2){

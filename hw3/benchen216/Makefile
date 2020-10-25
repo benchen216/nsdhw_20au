@@ -23,7 +23,7 @@ MKLLINKLINE := \
 
 CXX = g++
 CXXFLAGS := ${CXXFLAGS} \
-	-std=c++11 -O3 -g -m64 \
+	-std=c++17 -O3 -g -m64 -shared\
 	-I${MKLROOT}/include \
 	${MKLLINKLINE} \
 	${FLAGS}
@@ -39,3 +39,6 @@ default: ${BINS}
 .PHONY: clean
 clean:
 	rm -rf *.o *.dSYM/ ${BINS}
+
+.PHONY: test
+test:
